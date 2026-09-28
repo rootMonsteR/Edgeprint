@@ -49,8 +49,10 @@ With more than one response the output is a per-host summary. Folding rules:
 - vendors are shown with the number of responses naming them, e.g. `[4/4]`;
 - responses with no URL (raw dumps) are grouped by file;
 - hidden files and directories under a directory input are ignored;
-- inputs that cannot be read or parsed are reported under `skipped` and do not
-  abort the run. A single explicitly named file that fails still exits 1.
+- inputs that cannot be read or parsed, and responses with no headers (a stray
+  README in a capture directory), are reported under `skipped` rather than
+  counted as clean hosts, and do not abort the run. A single explicitly named
+  file that fails still exits 1.
 
 `--format` applies to every input; the default detects it per file by extension
 (`.har`, `.json`, anything else raw).

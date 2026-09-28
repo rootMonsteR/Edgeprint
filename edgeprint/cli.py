@@ -79,7 +79,10 @@ def _read(path: pathlib.Path, fmt: str) -> list[HttpObservation]:
         raise ValueError(f"File not found: {path}")
     if not path.is_file():
         raise ValueError(f"Path is not a file: {path}")
-    text = path.read_text(encoding="utf-8", errors="ignore")
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as e:
+        raise ValueError(f"Cannot read {path}: {e.strerror or e}") from e
     fmt = fmt if fmt != "auto" else _auto_fmt(str(path))
     logger.info(f"Reading {path} as {fmt}")
     if fmt == "raw":
@@ -194,7 +197,7 @@ def main(argv: Optional[list] = None) -> int:
             return _single_exit(report, ob)
 
         corpus = analyze_corpus(observations)
-        corpus.skipped = skipped
+        corpus.skipped = skipped + corpus.skipped
         print(corpus_to_json(corpus) if args.json else corpus_to_text(corpus))
         return _corpus_exit(corpus)
 

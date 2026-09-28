@@ -17,6 +17,10 @@ Folding rules, and why:
   filtering layer exists for that host, whatever the other responses show.
 - **Vendors are counted by the number of responses naming them**, so a reader
   can tell a vendor seen on every response from one seen once.
+- **Responses without headers are skipped, not counted as clean.** A stray
+  README in a capture directory is not evidence that a host is unprotected;
+  single-response mode already treats it as indeterminate, and corpus mode must
+  not turn the same input into a confident negative.
 """
 
 import logging
@@ -37,7 +41,6 @@ class ResponseResult:
     source: str
     url: str
     status_code: int
-    has_headers: bool
     report: DetectionReport
 
 
@@ -55,7 +58,7 @@ class HostSummary:
 
 @dataclass
 class CorpusReport:
-    """Per-response results, per-host posture, and inputs that could not be read."""
+    """Per-response results, per-host posture, and inputs that were not analyzed."""
 
     results: list[ResponseResult] = field(default_factory=list)
     hosts: list[HostSummary] = field(default_factory=list)
@@ -72,7 +75,7 @@ class CorpusReport:
     @property
     def analyzable(self) -> bool:
         """Whether any response carried headers - the precondition for a negative."""
-        return any(r.has_headers for r in self.results)
+        return bool(self.results)
 
 
 def host_key(url: str, source: str) -> str:
@@ -114,13 +117,15 @@ def analyze_corpus(observations: list[tuple[str, HttpObservation]]) -> CorpusRep
     report = CorpusReport()
     by_host: dict[str, HostSummary] = {}
     for source, ob in observations:
+        if not ob.headers:
+            report.skipped.append((source, "no response headers"))
+            continue
         result = analyze(ob)
         report.results.append(
             ResponseResult(
                 source=source,
                 url=ob.url,
                 status_code=ob.status_code,
-                has_headers=bool(ob.headers),
                 report=result,
             )
         )

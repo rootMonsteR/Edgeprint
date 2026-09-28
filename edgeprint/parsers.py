@@ -146,10 +146,14 @@ def parse_json_obs(text: str) -> HttpObservation:
     if body_excerpt and len(body_excerpt) > MAX_BODY_EXCERPT:
         body_excerpt = body_excerpt[:MAX_BODY_EXCERPT]
 
+    # Untrusted input: a non-string url would crash host grouping downstream.
+    url = data.get("url", "")
+    method = data.get("method", "GET")
+
     logger.debug(f"Parsed JSON observation: status={status_code}, headers={len(headers)}")
     return HttpObservation(
-        url=data.get("url", ""),
-        method=data.get("method", "GET"),
+        url=url if isinstance(url, str) else "",
+        method=method if isinstance(method, str) else "GET",
         status_code=status_code,
         headers=headers,
         body_excerpt=body_excerpt,

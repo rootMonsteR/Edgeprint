@@ -61,7 +61,7 @@ static.example.net  (2 responses)  EDGE/CDN PRESENT, NO WAF EVIDENCE
 api.example.org  (1 response)  NO EDGE PROTECTION DETECTED
 ```
 
-Edge evidence is rarely on every response: the CDN shows everywhere, while the one challenge page proving a WAF is on `/admin`. So a host is WAF-likely if **any** of its responses is, and per-layer confidence is the **maximum** over its responses, never a sum — fifty cached pages are one piece of evidence repeated, not fifty. Responses without a URL (raw `curl -i` dumps) are grouped by file. Unreadable inputs are listed as skipped rather than aborting the run; `--json` includes every per-response report.
+Edge evidence is rarely on every response: the CDN shows everywhere, while the one challenge page proving a WAF is on `/admin`. So a host is WAF-likely if **any** of its responses is, and per-layer confidence is the **maximum** over its responses, never a sum — fifty cached pages are one piece of evidence repeated, not fifty. Responses without a URL (raw `curl -i` dumps) are grouped by file. Unreadable inputs, and files with no response headers, are listed as skipped rather than counted as clean or aborting the run; `--json` includes every per-response report.
 
 **Input formats:** raw `curl -i` dumps, JSON observations, HAR exports (Burp, ZAP, browser DevTools).
 

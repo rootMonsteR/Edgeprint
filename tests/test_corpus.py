@@ -204,3 +204,64 @@ def test_cli_repeated_input_flag(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert code == EXIT_WAF_LIKELY
     assert len(payload["responses"]) == 2
+
+
+def test_headerless_responses_are_skipped_not_clean(capsys, tmp_path):
+    """A stray non-capture file must not become a confident negative host."""
+    (tmp_path / "README.md").write_text("just some notes\n", encoding="utf-8")
+    code = main(["analyze", "-i", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == EXIT_INDETERMINATE
+    assert payload["hosts"] == []
+    assert payload["skipped"] == [
+        {"source": str(tmp_path / "README.md"), "reason": "no response headers"}
+    ]
+
+
+def test_headerless_file_beside_a_capture_does_not_add_a_host(capsys, tmp_path):
+    (tmp_path / "README.md").write_text("just some notes\n", encoding="utf-8")
+    (tmp_path / "plain.txt").write_text(
+        (FIXTURES / "negative" / "nginx_200_plain.txt").read_text(), encoding="utf-8"
+    )
+    code = main(["analyze", "-i", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == EXIT_OK
+    assert len(payload["hosts"]) == 1
+
+
+def test_non_string_json_url_does_not_crash_the_run(capsys, tmp_path):
+    (tmp_path / "obs.json").write_text(
+        json.dumps({"url": 5, "method": [], "headers": {"x-sucuri-id": "1"}}), encoding="utf-8"
+    )
+    code = main(
+        [
+            "analyze",
+            "-i",
+            str(tmp_path / "obs.json"),
+            str(FIXTURES / "negative" / "nginx_200_plain.txt"),
+            "--json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert code != EXIT_INDETERMINATE
+    assert len(payload["hosts"]) == 2
+
+
+def test_unreadable_file_is_skipped_not_fatal(capsys, tmp_path, monkeypatch):
+    locked = tmp_path / "locked.txt"
+    locked.write_text("HTTP/1.1 200 OK\nServer: nginx\n", encoding="utf-8")
+    real_read_text = pathlib.Path.read_text
+
+    def fake_read_text(self, *args, **kwargs):
+        if self == locked:
+            raise PermissionError(13, "Permission denied")
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "read_text", fake_read_text)
+    code = main(
+        ["analyze", "-i", str(locked), str(FIXTURES / "positive" / "imperva_200.txt"), "--json"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert code == EXIT_WAF_LIKELY
+    assert payload["skipped"][0]["source"] == str(locked)
+    assert "Permission denied" in payload["skipped"][0]["reason"]

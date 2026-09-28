@@ -31,6 +31,15 @@ file. Both now scale to whole captures.
   non-string bodies) instead of raising mid-archive.
 - Project URLs and contributor instructions point at the renamed repository.
 
+### Fixed in review
+- A JSON observation with a non-string `url` crashed the whole corpus run in host
+  grouping. `parse_json_obs` now validates `url` and `method` like the HAR parser.
+- Header-less inputs (a README in a capture directory) were counted as hosts with
+  "nothing detected", a confident negative that single-response mode correctly
+  reports as indeterminate. They are now skipped with a reason.
+- A file that failed to read (`OSError`, e.g. permission denied) aborted the run
+  instead of being skipped.
+
 ## [0.3.0] - 2026-08-20
 
 ### Fixed in review (second pass)
