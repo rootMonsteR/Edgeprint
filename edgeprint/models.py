@@ -1,6 +1,6 @@
-"""Data models for WAF presence detection.
+"""Data models for edge-protection detection.
 
-This module defines the core data structures used throughout the WAF presence checker.
+This module defines the core data structures used throughout edgeprint.
 """
 
 from dataclasses import dataclass, field

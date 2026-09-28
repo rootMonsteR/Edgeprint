@@ -8,7 +8,7 @@ Analyze only traffic you are authorized to possess. This tool reads files you gi
 it and makes no requests of its own; that does not make the capture itself lawful.
 """
 
-__all__ = ["analyzer", "parsers", "reporters", "fingerprints", "models"]
-__version__ = "0.3.0"
+__all__ = ["analyzer", "corpus", "parsers", "reporters", "fingerprints", "models"]
+__version__ = "0.4.0"
 __author__ = "edgeprint contributors"
 __license__ = "MIT AND Apache-2.0"  # engine MIT; fingerprint database Apache-2.0

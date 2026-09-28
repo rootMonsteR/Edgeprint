@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-28
+
+Corpus mode: the README promised posture "across every response in this
+capture", but the HAR parser read only the first entry and the CLI accepted one
+file. Both now scale to whole captures.
+
+### Added
+- `edgeprint analyze` accepts several inputs and directories (`-i a.har b/ c.txt`,
+  or `-i` repeated), with the format detected per file.
+- Every HAR entry is analyzed (`parsers.parse_har_all`), not just the first.
+- `edgeprint.corpus`: per-response results folded into per-host posture. A host is
+  WAF-likely if any response is; per-layer confidence is the maximum across its
+  responses rather than a sum, so request volume cannot masquerade as certainty.
+- Corpus text and JSON reporters; the JSON carries every per-response report.
+- Unreadable inputs are reported as skipped instead of aborting the run.
+- `--version`.
+- `tests/fixtures/corpus/mixed_hosts.har` and `tests/test_corpus.py`.
+
+### Changed
+- One response still gets the detailed single-response report and output format;
+  anything larger gets the corpus view. The exit code over several responses is the
+  most severe host's.
+- HAR parsing tolerates malformed entries (non-dict entries, non-list headers,
+  non-string bodies) instead of raising mid-archive.
+- Project URLs and contributor instructions point at the renamed repository.
+
+### Fixed in review
+- A JSON observation with a non-string `url` crashed the whole corpus run in host
+  grouping. `parse_json_obs` now validates `url` and `method` like the HAR parser.
+- Header-less inputs (a README in a capture directory) were counted as hosts with
+  "nothing detected", a confident negative that single-response mode correctly
+  reports as indeterminate. They are now skipped with a reason.
+- A file that failed to read (`OSError`, e.g. permission denied) aborted the run
+  instead of being skipped.
+
 ## [0.3.0] - 2026-08-20
 
 ### Fixed in review (second pass)

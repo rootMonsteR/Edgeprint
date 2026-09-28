@@ -23,7 +23,8 @@ Python 3.9+. No runtime dependencies.
 curl -i https://example.com > response.txt
 
 edgeprint analyze -i response.txt              # format auto-detected
-edgeprint analyze -i capture.har --format har
+edgeprint analyze -i capture.har               # every entry, folded per host
+edgeprint analyze -i captures/ more.har        # files and directories, mixed formats
 edgeprint analyze -i response.txt --json
 ```
 
@@ -41,9 +42,30 @@ Indicators:
 
 **Layers are reported separately, because a CDN is not a WAF.** Akamai serving your traffic proves a CDN edge and, via `ak_bmsc`, bot management — it does not prove request filtering. Most tools collapse all of this into "WAF detected"; edgeprint does not.
 
+### Whole captures
+
+Give it more than one response — a multi-entry HAR, several files, a directory — and it reports posture per host:
+
+```
+Corpus: 7 responses across 3 hosts
+Posture: WAF likely on 1, edge/CDN only on 1, nothing detected on 1
+
+shop.example.com  (4 responses)  WAF LIKELY PRESENT
+  Layers: cdn=0.70, waf=0.70
+  Vendors: Cloudflare (edge firewall/CDN) [4/4]
+
+static.example.net  (2 responses)  EDGE/CDN PRESENT, NO WAF EVIDENCE
+  Layers: cdn=0.70
+  Vendors: Fastly [2/2]
+
+api.example.org  (1 response)  NO EDGE PROTECTION DETECTED
+```
+
+Edge evidence is rarely on every response: the CDN shows everywhere, while the one challenge page proving a WAF is on `/admin`. So a host is WAF-likely if **any** of its responses is, and per-layer confidence is the **maximum** over its responses, never a sum — fifty cached pages are one piece of evidence repeated, not fifty. Responses without a URL (raw `curl -i` dumps) are grouped by file. Unreadable inputs, and files with no response headers, are listed as skipped rather than counted as clean or aborting the run; `--json` includes every per-response report.
+
 **Input formats:** raw `curl -i` dumps, JSON observations, HAR exports (Burp, ZAP, browser DevTools).
 
-**Exit codes:** `0` nothing detected · `1` nothing analyzable · `2` WAF likely present · `3` edge/CDN present, no WAF evidence.
+**Exit codes:** `0` nothing detected · `1` nothing analyzable · `2` WAF likely present · `3` edge/CDN present, no WAF evidence. Across several responses, the most severe host decides.
 
 ## Detected
 
