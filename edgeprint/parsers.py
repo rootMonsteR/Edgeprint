@@ -156,19 +156,8 @@ def parse_json_obs(text: str) -> HttpObservation:
     )
 
 
-def parse_har(text: str) -> HttpObservation:
-    """Parse HTTP observation from HAR (HTTP Archive) format.
-
-    Args:
-        text: JSON string in HAR format
-
-    Returns:
-        HttpObservation object with parsed data from the first entry
-
-    Raises:
-        ValueError: If HAR format is invalid or contains no entries
-        json.JSONDecodeError: If the input is not valid JSON
-    """
+def _load_har_entries(text: str) -> list:
+    """Validate a HAR document and return its entries list."""
     if not text or not text.strip():
         raise ValueError("Input text is empty")
 
@@ -177,17 +166,23 @@ def parse_har(text: str) -> HttpObservation:
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON format: {e}") from e
 
-    # Validate HAR structure
-    if "log" not in data:
+    if not isinstance(data, dict) or not isinstance(data.get("log"), dict):
         raise ValueError("Invalid HAR format: missing 'log' field")
 
-    entries = data.get("log", {}).get("entries", [])
-    if not entries:
+    entries = data["log"].get("entries", [])
+    if not isinstance(entries, list) or not entries:
         raise ValueError("HAR file contains no entries")
+    return entries
 
-    # Extract first entry
-    entry = entries[0]
-    res = entry.get("response", {})
+
+def _har_entry(entry: Any) -> HttpObservation:
+    """Convert one HAR entry to an observation. Malformed fields degrade, not crash."""
+    if not isinstance(entry, dict):
+        return HttpObservation()
+    res = entry.get("response")
+    res = res if isinstance(res, dict) else {}
+    req = entry.get("request")
+    req = req if isinstance(req, dict) else {}
 
     try:
         status = int(res.get("status", 0))
@@ -197,20 +192,53 @@ def parse_har(text: str) -> HttpObservation:
 
     # Parse headers safely
     headers: dict[str, str] = {}
-    for h in res.get("headers", []):
-        if isinstance(h, dict) and "name" in h and "value" in h:
-            _add_header(headers, h["name"], h["value"])
+    raw_headers = res.get("headers", [])
+    for h in raw_headers if isinstance(raw_headers, list) else []:
+        if isinstance(h, dict) and isinstance(h.get("name"), str) and "value" in h:
+            _add_header(headers, h["name"], str(h["value"]))
 
     # Extract body excerpt with size limit
     body_excerpt = None
     content = res.get("content", {})
-    if isinstance(content, dict) and content.get("text"):
+    if isinstance(content, dict) and isinstance(content.get("text"), str) and content["text"]:
         body_excerpt = content["text"][:MAX_BODY_EXCERPT]
 
-    url = entry.get("request", {}).get("url", "")
-    method = entry.get("request", {}).get("method", "GET")
-
-    logger.debug(f"Parsed HAR file: status={status}, headers={len(headers)}, url={url}")
+    url = req.get("url", "")
+    method = req.get("method", "GET")
     return HttpObservation(
-        url=url, method=method, status_code=status, headers=headers, body_excerpt=body_excerpt
+        url=url if isinstance(url, str) else "",
+        method=method if isinstance(method, str) else "GET",
+        status_code=status,
+        headers=headers,
+        body_excerpt=body_excerpt,
     )
+
+
+def parse_har(text: str) -> HttpObservation:
+    """Parse the first entry of a HAR (HTTP Archive) document.
+
+    Kept for callers that want a single observation. Use :func:`parse_har_all`
+    to analyze every response in the archive, which is what the CLI does.
+
+    Raises:
+        ValueError: If HAR format is invalid or contains no entries
+    """
+    ob = _har_entry(_load_har_entries(text)[0])
+    logger.debug(f"Parsed HAR entry: status={ob.status_code}, headers={len(ob.headers)}")
+    return ob
+
+
+def parse_har_all(text: str) -> list[HttpObservation]:
+    """Parse every entry of a HAR document, in archive order.
+
+    A HAR export is a capture of many responses, often across several hosts, and
+    edge signals are rarely on all of them: a block page or a bot-management
+    cookie typically appears on one request in fifty. Reading only the first
+    entry, as ``parse_har`` does, misses exactly the evidence that matters.
+
+    Raises:
+        ValueError: If HAR format is invalid or contains no entries
+    """
+    obs = [_har_entry(e) for e in _load_har_entries(text)]
+    logger.debug(f"Parsed HAR file: {len(obs)} entries")
+    return obs

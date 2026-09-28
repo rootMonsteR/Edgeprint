@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "edgeprint"
-version = "0.3.0"
+version = "0.4.0"
 description = "Offline, corpus-scale fingerprinting of WAF, CDN and edge protection from captured HTTP responses. Sends no network traffic."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -48,10 +48,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/rootMonsteR/waf_presence_checker"
-Documentation = "https://github.com/rootMonsteR/waf_presence_checker/blob/main/README.md"
-"Source Code" = "https://github.com/rootMonsteR/waf_presence_checker"
-"Bug Tracker" = "https://github.com/rootMonsteR/waf_presence_checker/issues"
+Homepage = "https://github.com/rootMonsteR/Edgeprint"
+Documentation = "https://github.com/rootMonsteR/Edgeprint/blob/main/README.md"
+"Source Code" = "https://github.com/rootMonsteR/Edgeprint"
+"Bug Tracker" = "https://github.com/rootMonsteR/Edgeprint/issues"
 
 [project.scripts]
 edgeprint = "edgeprint.cli:main"

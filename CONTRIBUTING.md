@@ -64,8 +64,8 @@ Documentation improvements are always appreciated:
 
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/waf_presence_checker.git
-   cd waf_presence_checker
+   git clone https://github.com/YOUR_USERNAME/Edgeprint.git
+   cd Edgeprint
    ```
 
 3. **Create a virtual environment:**
